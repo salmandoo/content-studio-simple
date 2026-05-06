@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ───────────── Apple-style tokens — light, single-theme ───────────── */
+@theme inline {
+  --color-bg:               oklch(0.98  0.003 264);
+  --color-card:             oklch(1.00  0     0);
+  --color-fill:             oklch(0.55  0.005 264 / 0.10);
+  --color-fill-secondary:   oklch(0.55  0.005 264 / 0.16);
+  --color-separator:        oklch(0.55  0.005 264 / 0.18);
+
+  --color-label:            oklch(0.18  0.013 270);
+  --color-label-secondary:  oklch(0.36  0.012 264 / 0.65);
+  --color-label-tertiary:   oklch(0.36  0.012 264 / 0.36);
+
+  --color-blue:             oklch(0.62  0.20  251);
+  --color-blue-soft:        oklch(0.62  0.20  251 / 0.12);
+  --color-green:            oklch(0.74  0.176 145);
+  --color-green-soft:       oklch(0.74  0.176 145 / 0.14);
+  --color-orange:           oklch(0.78  0.165  60);
+  --color-orange-soft:      oklch(0.78  0.165  60 / 0.14);
+  --color-red:              oklch(0.64  0.22   27);
+  --color-red-soft:         oklch(0.64  0.22   27 / 0.12);
+  --color-purple:           oklch(0.62  0.22  312);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  --shadow-sm: 0 0.5px 0 0 oklch(0.55 0 0 / 0.06), 0 1px 2px -1px oklch(0.2 0 0 / 0.04);
+  --shadow-md: 0 0.5px 0 0 oklch(0.55 0 0 / 0.08), 0 4px 12px -4px oklch(0.2 0 0 / 0.10);
+  --shadow-lg: 0 1px 0 0 oklch(0.55 0 0 / 0.10), 0 12px 32px -8px oklch(0.2 0 0 / 0.18);
+}
+
+@layer base {
+  html, body {
+    background: var(--color-bg);
+    color: var(--color-label);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--color-blue) 30%, transparent);
+  }
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-blue) 28%, transparent);
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.5 0.005 264 / 0.30);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+}
+
+/* ───────────── Type ramp (HIG-ish) ───────────── */
+.text-large-title { font-size: 36px; line-height: 42px; font-weight: 700; letter-spacing: -0.022em; }
+.text-title-1     { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.020em; }
+.text-title-2     { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.018em; }
+.text-title-3     { font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.016em; }
+.text-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.012em; }
+.text-body        { font-size: 16px; line-height: 22px; font-weight: 400; letter-spacing: -0.008em; }
+.text-callout     { font-size: 15px; line-height: 20px; font-weight: 400; }
+.text-footnote    { font-size: 13px; line-height: 18px; font-weight: 400; }
+.text-caption-1   { font-size: 12px; line-height: 16px; font-weight: 500; }
+
+.num-tabular { font-variant-numeric: tabular-nums; }
+
+/* ───────────── Motion ───────────── */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 480ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.rise-1 { animation-delay:  60ms; }
+.rise-2 { animation-delay: 120ms; }
+.rise-3 { animation-delay: 180ms; }
+.rise-4 { animation-delay: 240ms; }
+.rise-5 { animation-delay: 300ms; }
+.rise-6 { animation-delay: 360ms; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(0.94); }
+}
+.pulse-soft { animation: pulse-soft 1.6s cubic-bezier(0.4,0,0.6,1) infinite; }
+
+.pressable {
+  transition: transform 120ms cubic-bezier(0.32,0.72,0,1), background-color 120ms ease, opacity 120ms ease;
+}
+.pressable:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .pulse-soft, .pressable { animation: none !important; transition: none !important; }
+}
+
+/* ───────────── iOS toggle switch ───────────── */
+.ios-switch {
+  appearance: none;
+  width: 44px; height: 26px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+  flex-shrink: 0;
+}
+.ios-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.15), 0 0 0 0.5px oklch(0 0 0 / 0.04);
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ios-switch:checked { background: var(--color-green); }
+.ios-switch:checked::after { transform: translateX(18px); }
