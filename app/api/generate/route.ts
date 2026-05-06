@@ -12,7 +12,7 @@ const Body = z.object({
   channels: z.array(z.enum(PLATFORMS)).min(1),
 });
 
-// Per-channel rules. Compact and explicit so Claude sticks to the format.
+// Per-channel content rules.
 const PLATFORM_RULES: Record<Platform, { format: string; rules: string }> = {
   linkedin: {
     format: "long_post",
@@ -32,16 +32,20 @@ const PLATFORM_RULES: Record<Platform, { format: string; rules: string }> = {
   blog: {
     format: "article",
     rules:
-      "Blog article 500–900 words. Markdown. Title, intro paragraph, 3–5 H2 sections, scannable. Conclude with a take-away, not a sales pitch.",
+      "Blog article 500–900 words. Markdown. Title, intro paragraph, 3–5 H2 sections, scannable. Conclude with a take-away.",
   },
 };
+
+// Visual design templates the model can pick. Each maps to a renderer in /api/og.
+const TEMPLATES = ["editorial", "bold", "stat", "minimal"] as const;
+const PALETTES = ["mono", "vermillion", "indigo", "forest", "amber", "cream"] as const;
 
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    title:    { type: "string", description: "Short editorial title for the UI list." },
-    body:     { type: "string", description: "The full content. Markdown allowed for blog; plain text otherwise." },
+    title:    { type: "string", description: "Short editorial title for the UI." },
+    body:     { type: "string", description: "The full content. Markdown allowed for blog; plain for others." },
     hashtags: { type: "array", items: { type: "string" } },
     cta:      { type: ["string", "null"] },
     slides: {
@@ -56,19 +60,43 @@ const SCHEMA = {
         required: ["headline", "body"],
       },
     },
+    design: {
+      type: "object",
+      additionalProperties: false,
+      description: "Visual design choices for the rendered post image.",
+      properties: {
+        template:    { type: "string", enum: [...TEMPLATES] },
+        palette:     { type: "string", enum: [...PALETTES] },
+        big_text:    { type: "string", description: "Largest text on the image — 2–8 words. The hook." },
+        small_text:  { type: "string", description: "Secondary line under the big text — 4–14 words. The follow-through." },
+        kicker:      { type: ["string", "null"], description: "Optional eyebrow above big_text — 1–4 words, often uppercase." },
+      },
+      required: ["template", "palette", "big_text", "small_text", "kicker"],
+    },
   },
-  required: ["title", "body", "hashtags", "cta", "slides"],
+  required: ["title", "body", "hashtags", "cta", "slides", "design"],
 } as const;
 
 const SYSTEM = [
-  "You are a senior content writer. Given a brief, you produce platform-native content.",
+  "You are a senior content writer AND visual director. Given a brief, you produce platform-native content + visual design choices.",
   "",
   "Voice: plain, specific, no marketing fluff. Avoid: 'transform', 'unlock', 'leverage', 'best-in-class', 'game-changing', 'revolutionary', 'AI-powered'.",
   "",
   "Output rules:",
   "- Return ONLY a JSON object matching the schema. No prose, no preamble, no Markdown fences.",
   "- For Instagram, populate 'slides' with 5–7 entries plus a caption in 'body'. For other channels, set slides to null.",
-  "- Never invent statistics or named people that aren't in the brief.",
+  "- Never invent statistics or named people not in the brief.",
+  "",
+  "Design rules:",
+  "- Choose a template that fits the message:",
+  "  · editorial — white/cream bg, refined serif vibe, for thoughtful posts",
+  "  · bold     — saturated bg, big confident headline, for announcements",
+  "  · stat     — one large number/word + small label, for data or punchlines",
+  "  · minimal  — generous whitespace, small mark, for premium / understated",
+  "- Choose a palette tone that fits the mood: mono (b/w), vermillion (warm orange/red), indigo (deep blue/purple), forest (deep green), amber (warm gold), cream (soft warm white).",
+  "- big_text is the visual focal point — make it sharp, not a sentence. 2–8 words.",
+  "- small_text is the supporting line under it — readable but not the headline.",
+  "- kicker is optional 1–4 word eyebrow, e.g., 'NEW' / 'ANNOUNCEMENT' / 'BEHIND THE SCENES'.",
 ].join("\n");
 
 const MODEL_FAST = process.env.ANTHROPIC_FAST_MODEL || "claude-haiku-4-5-20251001";
@@ -77,6 +105,14 @@ const MODEL_LONG = process.env.ANTHROPIC_MODEL      || "claude-opus-4-7";
 function modelFor(platform: Platform) {
   return platform === "facebook" ? MODEL_FAST : MODEL_LONG;
 }
+
+type DesignSpec = {
+  template: (typeof TEMPLATES)[number];
+  palette: (typeof PALETTES)[number];
+  big_text: string;
+  small_text: string;
+  kicker: string | null;
+};
 
 type PieceResult = {
   id: string;
@@ -88,6 +124,8 @@ type PieceResult = {
   hashtags: string[];
   cta: string | null;
   slides: { headline: string; body: string }[] | null;
+  design: DesignSpec | null;
+  image_url: string | null;
   tokens_in: number;
   tokens_out: number;
   cost_cents: number;
@@ -101,6 +139,18 @@ const PRICE: Record<string, { in: number; out: number }> = {
 function priceCents(model: string, tin: number, tout: number) {
   const p = PRICE[model] ?? PRICE["claude-opus-4-7"];
   return Math.round(((tin / 1e6) * p.in + (tout / 1e6) * p.out) * 100);
+}
+
+function imageUrl(platform: Platform, design: DesignSpec): string {
+  const params = new URLSearchParams({
+    p: platform,
+    t: design.template,
+    pal: design.palette,
+    big: design.big_text,
+    small: design.small_text,
+  });
+  if (design.kicker) params.set("k", design.kicker);
+  return `/api/og?${params.toString()}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -120,7 +170,6 @@ export async function POST(req: NextRequest) {
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // Generate all channels in parallel (concurrency 4 is fine for 4 channels).
   const tasks = body.channels.map(async (platform, idx): Promise<PieceResult> => {
     const rules = PLATFORM_RULES[platform];
     const model = modelFor(platform);
@@ -134,11 +183,10 @@ export async function POST(req: NextRequest) {
       "── BRIEF ──",
       body.prompt.trim(),
       "",
-      `Now generate one ${rules.format} for ${platform}. Match the schema exactly.`,
+      `Now generate one ${rules.format} for ${platform} AND choose visual design (template, palette, big_text, small_text, kicker). Match the schema exactly.`,
     ].join("\n");
 
     try {
-      // Cast through unknown to allow output_config (newer than this SDK's typings).
       const params = {
         model,
         max_tokens: 4096,
@@ -160,7 +208,7 @@ export async function POST(req: NextRequest) {
       if (!text || text.type !== "text") throw new Error("No text block in response");
       const parsed = JSON.parse(text.text) as Omit<
         PieceResult,
-        "id" | "platform" | "format" | "status" | "tokens_in" | "tokens_out" | "cost_cents" | "error"
+        "id" | "platform" | "format" | "status" | "tokens_in" | "tokens_out" | "cost_cents" | "error" | "image_url"
       >;
 
       const tin = response.usage.input_tokens + (response.usage.cache_read_input_tokens ?? 0);
@@ -176,6 +224,8 @@ export async function POST(req: NextRequest) {
         hashtags: parsed.hashtags ?? [],
         cta: parsed.cta ?? null,
         slides: parsed.slides ?? null,
+        design: parsed.design,
+        image_url: parsed.design ? imageUrl(platform, parsed.design) : null,
         tokens_in: tin,
         tokens_out: tout,
         cost_cents: priceCents(model, tin, tout),
@@ -191,6 +241,8 @@ export async function POST(req: NextRequest) {
         hashtags: [],
         cta: null,
         slides: null,
+        design: null,
+        image_url: null,
         tokens_in: 0,
         tokens_out: 0,
         cost_cents: 0,

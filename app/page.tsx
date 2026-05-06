@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 import {
   Sparkles,
@@ -13,10 +14,19 @@ import {
   ArrowLeft,
   Send,
   Loader2,
+  Download,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type Platform = "linkedin" | "instagram" | "facebook" | "blog";
+
+type DesignSpec = {
+  template: "editorial" | "bold" | "stat" | "minimal";
+  palette: "mono" | "vermillion" | "indigo" | "forest" | "amber" | "cream";
+  big_text: string;
+  small_text: string;
+  kicker: string | null;
+};
 
 type Piece = {
   id: string;
@@ -28,6 +38,8 @@ type Piece = {
   hashtags: string[];
   cta: string | null;
   slides: { headline: string; body: string }[] | null;
+  design: DesignSpec | null;
+  image_url: string | null;
   tokens_in: number;
   tokens_out: number;
   cost_cents: number;
@@ -37,11 +49,11 @@ type Piece = {
 type Verdict = "approved" | "rejected" | "review";
 type Step = "compose" | "generating" | "approve" | "published";
 
-const PLATFORMS: { key: Platform; label: string; format: string; tint: string; mark: string }[] = [
-  { key: "linkedin",  label: "LinkedIn",  format: "Long-form post",     tint: "bg-blue",   mark: "in" },
-  { key: "instagram", label: "Instagram", format: "Carousel + caption", tint: "bg-[#E1306C]", mark: "Ig" },
-  { key: "facebook",  label: "Facebook",  format: "Short post",         tint: "bg-[#1877F2]", mark: "fb" },
-  { key: "blog",      label: "Blog",      format: "Article",            tint: "bg-orange", mark: "B" },
+const PLATFORMS: { key: Platform; label: string; format: string; tint: string; mark: string; aspect: string }[] = [
+  { key: "linkedin",  label: "LinkedIn",  format: "Long-form post",     tint: "bg-blue",      mark: "in", aspect: "16/9"  },
+  { key: "instagram", label: "Instagram", format: "Carousel + caption", tint: "bg-[#E1306C]", mark: "Ig", aspect: "1/1"   },
+  { key: "facebook",  label: "Facebook",  format: "Short post",         tint: "bg-[#1877F2]", mark: "fb", aspect: "1/1"   },
+  { key: "blog",      label: "Blog",      format: "Article + hero",     tint: "bg-orange",    mark: "B",  aspect: "16/9"  },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────
@@ -146,7 +158,7 @@ function Header() {
         </div>
       </div>
       <a
-        href="https://github.com/salmandoo/Content-Studio"
+        href="https://github.com/salmandoo/content-studio-simple"
         target="_blank"
         rel="noreferrer"
         className="text-footnote text-label-secondary hover:text-label"
@@ -160,8 +172,8 @@ function Header() {
 function Footer() {
   return (
     <footer className="mt-16 flex items-center justify-between border-t border-separator pt-6 text-caption-1 text-label-tertiary">
-      <span>Claude Opus 4.7 · Haiku 4.5</span>
-      <span>Made for marketers who'd rather edit than draft.</span>
+      <span>Claude Opus 4.7 · Haiku 4.5 · OG-rendered visuals</span>
+      <span>One brief, four channels.</span>
     </footer>
   );
 }
@@ -234,7 +246,7 @@ function ComposeStep({
           What should we <span className="text-blue">make</span>?
         </h1>
         <p className="mt-3 max-w-[60ch] text-body text-label-secondary">
-          One sentence is enough. The studio writes platform-native content for the channels you pick.
+          One sentence is enough. The studio writes copy <span className="text-label">and</span> designs the post image for every channel you pick.
         </p>
       </div>
 
@@ -261,7 +273,7 @@ function ComposeStep({
           onChange={(e) => setPrompt(e.target.value)}
           spellCheck={false}
           rows={6}
-          placeholder="e.g. Announce that we shipped dark mode in our app. Mention it follows system theme and was built on a new token layer."
+          placeholder="e.g. Announce that we shipped dark mode in our app. It follows system theme. Built on a new token layer."
           className="block w-full resize-none bg-card px-5 py-5 text-body leading-[1.55] text-label placeholder:text-label-tertiary focus:outline-none"
         />
       </div>
@@ -315,7 +327,7 @@ function ComposeStep({
           <p className="text-caption-1 uppercase tracking-wider text-label-tertiary">Estimate</p>
           <p className="mt-0.5 text-title-3">
             <span className="text-label">{picked.size}</span>{" "}
-            <span className="text-label-secondary">piece{picked.size === 1 ? "" : "s"}</span>{" "}
+            <span className="text-label-secondary">post{picked.size === 1 ? "" : "s"}</span>{" "}
             <span className="text-label-secondary">·</span>{" "}
             <span className="text-label">~{Math.max(8, picked.size * 4)}s</span>
           </p>
@@ -347,7 +359,7 @@ function GeneratingStep({ channels }: { channels: Platform[] }) {
       </div>
       <h2 className="mt-6 text-title-1">We're on it.</h2>
       <p className="mx-auto mt-2 max-w-[44ch] text-body text-label-secondary">
-        Writing {channels.length} piece{channels.length === 1 ? "" : "s"} in parallel.
+        Writing copy and designing post images for {channels.length} channel{channels.length === 1 ? "" : "s"} in parallel.
         First drafts come back in 5–20 seconds.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -401,7 +413,7 @@ function ApproveStep({
             Almost there. <span className="text-blue">Approve to publish.</span>
           </h1>
           <p className="mt-2 max-w-[60ch] text-body text-label-secondary">
-            Review each piece. Approve, send back for review, or reject.
+            Review the post — copy and visual together. Approve, send back for review, or reject.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -411,7 +423,7 @@ function ApproveStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {pieces.map((p, idx) => (
           <PieceCard
             key={p.id}
@@ -433,7 +445,7 @@ function ApproveStep({
               {counts.approved} approved · {counts.rejected} rejected
             </p>
             <p className="text-footnote text-label-secondary">
-              Approved pieces are ready for your scheduler.
+              Approved posts are ready for your scheduler.
             </p>
           </div>
         </div>
@@ -455,7 +467,7 @@ function ApproveStep({
             )}
           >
             <Send className="size-4" strokeWidth={2.4} />
-            Publish {counts.approved} piece{counts.approved === 1 ? "" : "s"}
+            Publish {counts.approved} post{counts.approved === 1 ? "" : "s"}
           </button>
         </div>
       </div>
@@ -494,6 +506,7 @@ function PieceCard({
   const platform = PLATFORMS.find((p) => p.key === piece.platform)!;
   const isFailed = piece.status === "failed";
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<"image" | "copy">("image");
 
   return (
     <article
@@ -534,42 +547,87 @@ function PieceCard({
       </div>
 
       {/* Body */}
-      <div className="flex-1 p-5">
-        {isFailed ? (
+      {isFailed ? (
+        <div className="p-5">
           <p className="text-callout text-red">{piece.error ?? "Generation failed."}</p>
-        ) : (
-          <>
-            <p className="text-headline">{piece.title}</p>
-            <p className="mt-2 line-clamp-6 whitespace-pre-line text-callout leading-[1.6] text-label-secondary">
-              {piece.body}
-            </p>
-            {piece.hashtags && piece.hashtags.length > 0 && (
-              <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-footnote font-medium text-blue">
-                {piece.hashtags.map((h) => (
-                  <span key={h}>{h}</span>
-                ))}
+        </div>
+      ) : (
+        <>
+          {/* Image / Copy tabs */}
+          <div className="flex items-center gap-1 border-b border-separator px-3 py-2">
+            <TabButton active={tab === "image"} onClick={() => setTab("image")}>
+              Image
+            </TabButton>
+            <TabButton active={tab === "copy"} onClick={() => setTab("copy")}>
+              Copy
+            </TabButton>
+            {piece.design && (
+              <span className="ml-auto text-caption-1 text-label-tertiary capitalize">
+                {piece.design.template} · {piece.design.palette}
+              </span>
+            )}
+          </div>
+
+          {tab === "image" && piece.image_url ? (
+            <div
+              className="relative w-full overflow-hidden bg-fill"
+              style={{ aspectRatio: platform.aspect }}
+            >
+              <Image
+                src={piece.image_url}
+                alt={piece.title}
+                fill
+                unoptimized
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              <a
+                href={piece.image_url}
+                download={`${piece.platform}-${piece.id}.png`}
+                className="pressable absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-caption-1 font-medium text-white backdrop-blur"
+                title="Download image"
+              >
+                <Download className="size-3.5" strokeWidth={2.2} />
+                PNG
+              </a>
+            </div>
+          ) : (
+            <div className="p-5">
+              <p className="text-headline">{piece.title}</p>
+              <p className="mt-2 line-clamp-[10] whitespace-pre-line text-callout leading-[1.6] text-label-secondary">
+                {piece.body}
               </p>
-            )}
-            {piece.slides && piece.slides.length > 0 && (
-              <details className="mt-3 rounded-[8px] bg-fill px-3 py-2">
-                <summary className="cursor-pointer text-footnote font-semibold text-label-secondary">
-                  {piece.slides.length} slides
-                </summary>
-                <ol className="mt-2 space-y-2 text-footnote">
-                  {piece.slides.map((s, i) => (
-                    <li key={i} className="border-t border-separator pt-2 first:border-t-0 first:pt-0">
-                      <p className="font-semibold text-label">
-                        {String(i + 1).padStart(2, "0")} · {s.headline}
-                      </p>
-                      <p className="mt-0.5 text-label-secondary">{s.body}</p>
-                    </li>
+              {piece.hashtags && piece.hashtags.length > 0 && (
+                <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-footnote font-medium text-blue">
+                  {piece.hashtags.map((h) => (
+                    <span key={h}>{h}</span>
                   ))}
-                </ol>
-              </details>
-            )}
-          </>
-        )}
-      </div>
+                </p>
+              )}
+              {piece.slides && piece.slides.length > 0 && (
+                <details className="mt-3 rounded-[8px] bg-fill px-3 py-2">
+                  <summary className="cursor-pointer text-footnote font-semibold text-label-secondary">
+                    {piece.slides.length} carousel slides
+                  </summary>
+                  <ol className="mt-2 space-y-2 text-footnote">
+                    {piece.slides.map((s, i) => (
+                      <li
+                        key={i}
+                        className="border-t border-separator pt-2 first:border-t-0 first:pt-0"
+                      >
+                        <p className="font-semibold text-label">
+                          {String(i + 1).padStart(2, "0")} · {s.headline}
+                        </p>
+                        <p className="mt-0.5 text-label-secondary">{s.body}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Verdict + actions */}
       <div className="border-t border-separator p-3">
@@ -601,31 +659,51 @@ function PieceCard({
           <span className="font-mono num-tabular">
             {piece.tokens_in + piece.tokens_out} tok · ${(piece.cost_cents / 100).toFixed(2)}
           </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={async () => {
-                await navigator.clipboard.writeText(piece.body);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }}
-              disabled={isFailed}
-              className="pressable inline-flex items-center gap-1 rounded-[6px] px-2 py-1 text-label-secondary hover:bg-fill disabled:opacity-40"
-              title="Copy"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-3" strokeWidth={2.4} /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3" strokeWidth={2.2} /> Copy
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(piece.body);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            disabled={isFailed}
+            className="pressable inline-flex items-center gap-1 rounded-[6px] px-2 py-1 text-label-secondary hover:bg-fill disabled:opacity-40"
+            title="Copy"
+          >
+            {copied ? (
+              <>
+                <Check className="size-3" strokeWidth={2.4} /> Copied
+              </>
+            ) : (
+              <>
+                <Copy className="size-3" strokeWidth={2.2} /> Copy text
+              </>
+            )}
+          </button>
         </div>
       </div>
     </article>
+  );
+}
+
+function TabButton({
+  active, onClick, children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "pressable rounded-[8px] px-3 py-1.5 text-footnote font-semibold transition-colors",
+        active
+          ? "bg-fill text-label"
+          : "text-label-tertiary hover:bg-fill/60 hover:text-label-secondary",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -674,8 +752,7 @@ function PublishedStep({ count, onAgain }: { count: number; onAgain: () => void 
       </div>
       <h2 className="mt-6 text-large-title">Published.</h2>
       <p className="mx-auto mt-2 max-w-[44ch] text-body text-label-secondary">
-        {count} piece{count === 1 ? "" : "s"} sent to your scheduler. Open another brief whenever
-        you're ready.
+        {count} post{count === 1 ? "" : "s"} ready. Open another brief whenever you're ready.
       </p>
       <button
         onClick={onAgain}
