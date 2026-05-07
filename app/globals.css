@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
-/* ───────────── Apple-style tokens — light, single-theme ───────────── */
+/* ───────────── Brand palette ─────────────
+   Lavender   #ac73e6  — main accent (logo, primary actions)
+   Smoke      #f5f5f5  — main background
+   Jet black  #171717  — primary text
+   Rich grape #2d004d  — deep accent (secondary surfaces, hover, ring)
+   ──────────────────────────────────────── */
 @theme inline {
-  --color-bg:               oklch(0.98  0.003 264);
-  --color-card:             oklch(1.00  0     0);
-  --color-fill:             oklch(0.55  0.005 264 / 0.10);
-  --color-fill-secondary:   oklch(0.55  0.005 264 / 0.16);
-  --color-separator:        oklch(0.55  0.005 264 / 0.18);
+  --color-bg:               #f5f5f5;        /* smoke */
+  --color-card:             #FFFFFF;
+  --color-fill:             rgba(23, 23, 23, 0.05);
+  --color-fill-secondary:   rgba(23, 23, 23, 0.10);
+  --color-separator:        rgba(23, 23, 23, 0.10);
 
-  --color-label:            oklch(0.18  0.013 270);
-  --color-label-secondary:  oklch(0.36  0.012 264 / 0.65);
-  --color-label-tertiary:   oklch(0.36  0.012 264 / 0.36);
+  --color-label:            #171717;        /* jet black */
+  --color-label-secondary:  rgba(23, 23, 23, 0.62);
+  --color-label-tertiary:   rgba(23, 23, 23, 0.40);
 
-  --color-blue:             oklch(0.62  0.20  251);
-  --color-blue-soft:        oklch(0.62  0.20  251 / 0.12);
-  --color-green:            oklch(0.74  0.176 145);
-  --color-green-soft:       oklch(0.74  0.176 145 / 0.14);
-  --color-orange:           oklch(0.78  0.165  60);
-  --color-orange-soft:      oklch(0.78  0.165  60 / 0.14);
-  --color-red:              oklch(0.64  0.22   27);
-  --color-red-soft:         oklch(0.64  0.22   27 / 0.12);
-  --color-purple:           oklch(0.62  0.22  312);
+  --color-lavender:         #ac73e6;
+  --color-lavender-soft:    rgba(172, 115, 230, 0.12);
+  --color-lavender-strong:  rgba(172, 115, 230, 0.18);
+
+  --color-grape:            #2d004d;
+  --color-grape-soft:       rgba(45, 0, 77, 0.10);
+
+  --color-jet:              #171717;
+
+  /* Semantic — kept for status pills */
+  --color-green:            #34c759;
+  --color-green-soft:       rgba(52, 199, 89, 0.14);
+  --color-orange:           #ff9500;
+  --color-orange-soft:      rgba(255, 149, 0, 0.14);
+  --color-red:              #ff3b30;
+  --color-red-soft:         rgba(255, 59, 48, 0.12);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
                "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -31,9 +43,9 @@
   --radius-lg: 16px;
   --radius-xl: 22px;
 
-  --shadow-sm: 0 0.5px 0 0 oklch(0.55 0 0 / 0.06), 0 1px 2px -1px oklch(0.2 0 0 / 0.04);
-  --shadow-md: 0 0.5px 0 0 oklch(0.55 0 0 / 0.08), 0 4px 12px -4px oklch(0.2 0 0 / 0.10);
-  --shadow-lg: 0 1px 0 0 oklch(0.55 0 0 / 0.10), 0 12px 32px -8px oklch(0.2 0 0 / 0.18);
+  --shadow-sm: 0 0.5px 0 0 rgba(23,23,23,0.04), 0 1px 2px -1px rgba(23,23,23,0.04);
+  --shadow-md: 0 0.5px 0 0 rgba(23,23,23,0.05), 0 6px 18px -8px rgba(45,0,77,0.10);
+  --shadow-lg: 0 1px 0 0 rgba(23,23,23,0.06), 0 16px 40px -10px rgba(45,0,77,0.18);
 }
 
 @layer base {
@@ -47,23 +59,23 @@
     letter-spacing: -0.011em;
   }
   ::selection {
-    background: color-mix(in oklch, var(--color-blue) 30%, transparent);
+    background: var(--color-lavender-strong);
   }
   *:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-blue) 28%, transparent);
+    box-shadow: 0 0 0 4px var(--color-lavender-soft);
     border-radius: 6px;
   }
   ::-webkit-scrollbar { width: 12px; height: 12px; }
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.5 0.005 264 / 0.30);
+    background: rgba(23, 23, 23, 0.20);
     border: 3px solid transparent;
     background-clip: padding-box;
     border-radius: 999px;
   }
 }
 
-/* ───────────── Type ramp (HIG-ish) ───────────── */
+/* ───────────── Apple HIG type ramp ───────────── */
 .text-large-title { font-size: 36px; line-height: 42px; font-weight: 700; letter-spacing: -0.022em; }
 .text-title-1     { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.020em; }
 .text-title-2     { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.018em; }
@@ -104,12 +116,12 @@
   .rise, .pulse-soft, .pressable { animation: none !important; transition: none !important; }
 }
 
-/* ───────────── iOS toggle switch ───────────── */
+/* ───────────── iOS toggle switch (lavender on) ───────────── */
 .ios-switch {
   appearance: none;
   width: 44px; height: 26px;
   border-radius: 999px;
-  background: var(--color-fill);
+  background: var(--color-fill-secondary);
   position: relative;
   cursor: pointer;
   transition: background-color 200ms ease;
@@ -122,8 +134,8 @@
   width: 22px; height: 22px;
   border-radius: 999px;
   background: white;
-  box-shadow: 0 2px 6px oklch(0 0 0 / 0.15), 0 0 0 0.5px oklch(0 0 0 / 0.04);
+  box-shadow: 0 2px 6px rgba(45,0,77,0.18), 0 0 0 0.5px rgba(23,23,23,0.04);
   transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
 }
-.ios-switch:checked { background: var(--color-green); }
+.ios-switch:checked { background: var(--color-lavender); }
 .ios-switch:checked::after { transform: translateX(18px); }

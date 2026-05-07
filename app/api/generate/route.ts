@@ -30,22 +30,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY missing on server." }, { status: 500 });
   }
 
-  // Expand channels into individual generation tasks (one per requested post).
+  // Expand channels into individual generation tasks. Each variant gets
+  // an explicit (variantIndex, variantTotal) so the runner can rotate angles.
   const tasks: Promise<unknown>[] = [];
   let pieceIdx = 0;
   for (const c of body.channels) {
     for (let i = 0; i < c.count; i++) {
-      const variantNote =
-        c.count > 1
-          ? `\n\nThis is variant ${i + 1} of ${c.count} for this channel — vary the angle, hook, or template from the others. Make each one feel distinct.`
-          : "";
       tasks.push(
         generateOne({
           id: `p${pieceIdx++}`,
           platform: c.platform,
           prompt: body.prompt,
-          adjustment: variantNote || undefined,
           font: body.font,
+          variantIndex: i,
+          variantTotal: c.count,
         }),
       );
     }

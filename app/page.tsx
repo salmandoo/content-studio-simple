@@ -26,7 +26,7 @@ type Platform = "linkedin" | "instagram" | "facebook" | "blog";
 
 type DesignSpec = {
   template: "editorial" | "bold" | "stat" | "minimal";
-  palette: "mono" | "vermillion" | "indigo" | "forest" | "amber" | "cream";
+  palette: "lavender" | "smoke" | "grape" | "jet" | "duo";
   big_text: string;
   small_text: string;
   kicker: string | null;
@@ -49,7 +49,7 @@ type Piece = {
 
 type Verdict = "approved" | "rejected" | "review";
 type Step = "compose" | "generating" | "approve" | "published";
-type FontKey = "inter" | "space-grotesk" | "playfair" | "plex" | "fraunces";
+type FontKey = "inter" | "plex";
 
 const PLATFORMS: {
   key: Platform;
@@ -59,18 +59,15 @@ const PLATFORMS: {
   mark: string;
   aspect: string;
 }[] = [
-  { key: "linkedin",  label: "LinkedIn",  format: "Long-form post",     tint: "bg-blue",      mark: "in", aspect: "16/9"  },
+  { key: "linkedin",  label: "LinkedIn",  format: "Long-form post",     tint: "bg-lavender",      mark: "in", aspect: "16/9"  },
   { key: "instagram", label: "Instagram", format: "Carousel + caption", tint: "bg-[#E1306C]", mark: "Ig", aspect: "1/1"   },
   { key: "facebook",  label: "Facebook",  format: "Short post",         tint: "bg-[#1877F2]", mark: "fb", aspect: "1/1"   },
   { key: "blog",      label: "Blog",      format: "Article + hero",     tint: "bg-orange",    mark: "B",  aspect: "16/9"  },
 ];
 
 const FONTS: { key: FontKey; name: string; vibe: string }[] = [
-  { key: "inter",          name: "Inter",          vibe: "Clean, neutral default" },
-  { key: "space-grotesk",  name: "Space Grotesk",  vibe: "Modern geometric"        },
-  { key: "playfair",       name: "Playfair Display", vibe: "Editorial serif"       },
-  { key: "plex",           name: "IBM Plex Sans",  vibe: "Technical, precise"      },
-  { key: "fraunces",       name: "Fraunces",       vibe: "Refined warm serif"      },
+  { key: "inter", name: "Inter",         vibe: "Clean, modern — the SF stand-in" },
+  { key: "plex",  name: "IBM Plex Sans", vibe: "Technical, precise"              },
 ];
 
 type Settings = { font: FontKey };
@@ -240,7 +237,7 @@ function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
     <header className="mb-12 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-[10px] bg-gradient-to-br from-blue to-purple text-[16px] font-bold text-white shadow-md">
+        <span className="grid size-9 place-items-center rounded-[10px] bg-gradient-to-br from-lavender to-grape text-[16px] font-bold text-white shadow-md">
           C
         </span>
         <div>
@@ -288,7 +285,7 @@ function StepIndicator({ step }: { step: Step }) {
               className={cn(
                 "grid size-8 place-items-center rounded-full text-[13px] font-bold transition-all",
                 state === "done"   && "bg-green text-white",
-                state === "active" && "bg-blue text-white",
+                state === "active" && "bg-lavender text-white",
                 state === "todo"   && "bg-fill text-label-tertiary",
               )}
             >
@@ -337,7 +334,7 @@ function ComposeStep({
     <div className="space-y-8">
       <div className="rise">
         <h1 className="text-large-title">
-          What should we <span className="text-blue">make</span>?
+          What should we <span className="text-lavender">make</span>?
         </h1>
         <p className="mt-3 max-w-[60ch] text-body text-label-secondary">
           One sentence is enough. The studio writes copy <span className="text-label">and</span>{" "}
@@ -356,7 +353,7 @@ function ComposeStep({
       <div className="rise rise-1 overflow-hidden rounded-[18px] bg-card shadow-md">
         <div className="flex items-center justify-between border-b border-separator px-5 py-3">
           <div className="flex items-center gap-2 text-headline">
-            <Sparkles className="size-4 text-blue" strokeWidth={2.2} />
+            <Sparkles className="size-4 text-lavender" strokeWidth={2.2} />
             Brief
           </div>
           <span className="text-caption-1 font-mono text-label-tertiary num-tabular">
@@ -444,7 +441,7 @@ function ComposeStep({
           className={cn(
             "pressable inline-flex items-center gap-2 rounded-[14px] px-6 py-3 text-headline shadow-md transition-all",
             canRun
-              ? "bg-blue text-white hover:brightness-110"
+              ? "bg-lavender text-white hover:brightness-110"
               : "cursor-not-allowed bg-fill text-label-tertiary",
           )}
         >
@@ -497,7 +494,7 @@ function GeneratingStep({
   const total = channels.reduce((a, c) => a + counts[c], 0);
   return (
     <div className="rise rounded-[22px] bg-card p-12 text-center shadow-lg">
-      <div className="mx-auto grid size-16 place-items-center rounded-full bg-blue-soft text-blue">
+      <div className="mx-auto grid size-16 place-items-center rounded-full bg-lavender-soft text-lavender">
         <Loader2 className="size-7 animate-spin" strokeWidth={2.2} />
       </div>
       <h2 className="mt-6 text-title-1">We're on it.</h2>
@@ -522,7 +519,7 @@ function GeneratingStep({
               >
                 {p.mark}
               </span>
-              <span className="pulse-soft size-1.5 rounded-full bg-blue" />
+              <span className="pulse-soft size-1.5 rounded-full bg-lavender" />
               {p.label} × {counts[ch]}
             </span>
           );
@@ -554,7 +551,7 @@ function ApproveStep({
       <div className="rise flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-large-title">
-            Almost there. <span className="text-blue">Approve to publish.</span>
+            Almost there. <span className="text-lavender">Approve to publish.</span>
           </h1>
           <p className="mt-2 max-w-[60ch] text-body text-label-secondary">
             Review each post — image and copy together. Send back for review with notes to redo
@@ -608,7 +605,7 @@ function ApproveStep({
             className={cn(
               "pressable inline-flex items-center gap-2 rounded-[12px] px-5 py-2.5 text-callout font-semibold shadow-md",
               counts.approved > 0
-                ? "bg-blue text-white hover:brightness-110"
+                ? "bg-lavender text-white hover:brightness-110"
                 : "cursor-not-allowed bg-fill text-label-tertiary",
             )}
           >
@@ -758,7 +755,7 @@ function PieceCard({
                 {piece.body}
               </p>
               {piece.hashtags && piece.hashtags.length > 0 && (
-                <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-footnote font-medium text-blue">
+                <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-footnote font-medium text-lavender">
                   {piece.hashtags.map((h) => <span key={h}>{h}</span>)}
                 </p>
               )}
@@ -955,7 +952,7 @@ function PublishedStep({ count, onAgain }: { count: number; onAgain: () => void 
       </p>
       <button
         onClick={onAgain}
-        className="pressable mt-6 inline-flex items-center gap-2 rounded-[12px] bg-blue px-5 py-2.5 text-callout font-semibold text-white shadow-md hover:brightness-110"
+        className="pressable mt-6 inline-flex items-center gap-2 rounded-[12px] bg-lavender px-5 py-2.5 text-callout font-semibold text-white shadow-md hover:brightness-110"
       >
         <RefreshCw className="size-4" strokeWidth={2.4} />
         New brief
@@ -1001,7 +998,7 @@ function SettingsPanel({
           {/* Font picker */}
           <section>
             <div className="mb-3 flex items-center gap-2">
-              <Type className="size-4 text-blue" strokeWidth={2.2} />
+              <Type className="size-4 text-lavender" strokeWidth={2.2} />
               <h3 className="text-callout font-semibold">Display font</h3>
             </div>
             <p className="mb-4 text-footnote text-label-secondary">
@@ -1018,7 +1015,7 @@ function SettingsPanel({
                     className={cn(
                       "flex w-full items-center justify-between rounded-[12px] border bg-card px-4 py-3 text-left transition-colors",
                       active
-                        ? "border-blue bg-blue/8"
+                        ? "border-lavender bg-lavender-soft"
                         : "border-separator hover:bg-fill",
                     )}
                   >
@@ -1026,14 +1023,14 @@ function SettingsPanel({
                       <p
                         className={cn(
                           "text-callout font-semibold",
-                          active ? "text-blue" : "text-label",
+                          active ? "text-lavender" : "text-label",
                         )}
                       >
                         {f.name}
                       </p>
                       <p className="text-footnote text-label-secondary">{f.vibe}</p>
                     </div>
-                    {active && <Check className="size-4 text-blue" strokeWidth={2.6} />}
+                    {active && <Check className="size-4 text-lavender" strokeWidth={2.6} />}
                   </button>
                 );
               })}

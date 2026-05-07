@@ -2,12 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export type Platform = "linkedin" | "instagram" | "facebook" | "blog";
 
-export const FONT_KEYS = ["inter", "space-grotesk", "playfair", "plex", "fraunces"] as const;
+export const FONT_KEYS = ["inter", "plex"] as const;
 export type FontKey = (typeof FONT_KEYS)[number];
 
 export type DesignSpec = {
   template: "editorial" | "bold" | "stat" | "minimal";
-  palette: "mono" | "vermillion" | "indigo" | "forest" | "amber" | "cream";
+  // Brand palette only — lavender/smoke/grape/jet plus a duo gradient.
+  palette: "lavender" | "smoke" | "grape" | "jet" | "duo";
   big_text: string;
   small_text: string;
   kicker: string | null;
@@ -52,7 +53,7 @@ const PLATFORM_RULES: Record<Platform, { format: string; rules: string }> = {
 };
 
 const TEMPLATES = ["editorial", "bold", "stat", "minimal"] as const;
-const PALETTES = ["mono", "vermillion", "indigo", "forest", "amber", "cream"] as const;
+const PALETTES = ["lavender", "smoke", "grape", "jet", "duo"] as const;
 
 const SCHEMA = {
   type: "object",
@@ -91,25 +92,45 @@ const SCHEMA = {
 } as const;
 
 const SYSTEM = [
-  "You are a senior content writer AND visual director. Given a brief, you produce platform-native content + visual design choices.",
+  "You are a senior content writer AND visual director for a brand whose color system is:",
+  "  · Lavender (#ac73e6) — main accent",
+  "  · Smoke    (#f5f5f5) — main background",
+  "  · Jet      (#171717) — primary text",
+  "  · Grape    (#2d004d) — deep accent / premium surfaces",
   "",
-  "Voice: plain, specific, no marketing fluff. Avoid: 'transform', 'unlock', 'leverage', 'best-in-class', 'game-changing', 'revolutionary', 'AI-powered'.",
+  "VOICE — Apple-style content writing (think Apple Newsroom, Today at Apple):",
+  "  · Direct, confident, plain. Never breathless.",
+  "  · Specific over abstract. One idea per sentence.",
+  "  · Short paragraphs. White space. No emoji unless the brief is playful.",
+  "  · NEVER use: 'transform', 'unlock', 'leverage', 'best-in-class', 'game-changing', 'revolutionary', 'AI-powered', 'seamless', 'cutting-edge', 'innovative'.",
+  "  · Strong verbs. Real nouns. Trust the reader.",
   "",
-  "Output rules:",
+  "VISUAL — Apple Newsroom layout principles:",
+  "  · Generous whitespace.",
+  "  · Single dominant element per layout (a headline, a number, a quote).",
+  "  · Hierarchy is achieved with size and space, not color noise.",
+  "  · Brand color (lavender) used sparingly as accent; smoke is the base canvas.",
+  "",
+  "OUTPUT rules:",
   "- Return ONLY a JSON object matching the schema. No prose, no preamble, no Markdown fences.",
   "- For Instagram, populate 'slides' with 5–7 entries plus a caption in 'body'. For other channels, set slides to null.",
   "- Never invent statistics or named people not in the brief.",
   "",
-  "Design rules:",
-  "- Choose a template that fits the message:",
-  "  · editorial — refined, magazine-style header, for thoughtful posts",
-  "  · bold     — saturated gradient, big confident headline, for announcements",
-  "  · stat     — one large number/word + small label, for data or punchlines",
-  "  · minimal  — generous whitespace, small mark, for premium / understated",
-  "- Choose a palette that fits the mood: mono (b/w), vermillion (warm orange/red), indigo (deep blue/purple), forest (deep green), amber (warm gold), cream (soft warm white).",
-  "- big_text is the visual focal point — make it sharp, not a sentence. 2–8 words.",
-  "- small_text is the supporting line under it — readable but not the headline.",
-  "- kicker is optional 1–4 word eyebrow, e.g., 'NEW' / 'ANNOUNCEMENT' / 'BEHIND THE SCENES'.",
+  "DESIGN choices:",
+  "- Template:",
+  "  · editorial — Apple Newsroom feel: smoke/white card, kicker, big headline, supporting line, brand mark. The default for most posts.",
+  "  · bold     — Lavender → grape gradient with a confident white headline. Use for announcements.",
+  "  · stat     — One huge grape word/number on smoke. Use for data, punchlines, or 'one truth' posts.",
+  "  · minimal  — Maximum whitespace, small lavender mark. Use for premium / understated tone.",
+  "- Palette:",
+  "  · lavender — smoke bg with lavender accents (default for editorial, minimal)",
+  "  · smoke    — pure white card (the most Apple Newsroom look)",
+  "  · grape    — deep grape canvas, lavender accents (premium / serious)",
+  "  · jet      — true black, lavender accents (high contrast / nighttime)",
+  "  · duo      — lavender→grape gradient (only with template=bold)",
+  "- big_text is the visual focal point — sharp, not a sentence. 2–8 words.",
+  "- small_text is the supporting line under it — one short sentence.",
+  "- kicker is 1–3 word eyebrow, e.g., 'NEW' / 'ANNOUNCEMENT' / 'BEHIND THE BUILD'. Optional.",
 ].join("\n");
 
 const MODEL_FAST = process.env.ANTHROPIC_FAST_MODEL || "claude-haiku-4-5-20251001";
@@ -138,16 +159,52 @@ function client() {
   return _client;
 }
 
+// Distinct angle prompts the runner cycles through when more than one variant
+// is requested for the same channel. Without these, parallel calls produce
+// near-identical outputs because each run has no awareness of its siblings.
+const VARIANT_ANGLES = [
+  "Open with a contrarian statement that challenges a common assumption in the brief's space.",
+  "Open with a personal first-person moment of realization or quiet failure.",
+  "Open with a concrete example or specific scene — names, numbers, places only if they're in the brief.",
+  "Open with a question that the reader can't dismiss.",
+  "Open with a 'three things I learned' or numbered-list pattern.",
+  "Use a quiet, journal-entry tone — almost too understated to be marketing.",
+  "Frame it as 'before / after' — the moment something shifted.",
+  "Frame it against the industry's conventional wisdom and explain why that wisdom is partial.",
+  "Pull a single sharp metaphor and ride it for the whole post.",
+  "Lead with the conclusion, then unpack why it matters.",
+];
+
+// Force palette/template variation so two variants don't both pick the same look.
+const TEMPLATE_ROTATION = ["editorial", "bold", "minimal", "stat"] as const;
+const PALETTE_ROTATION  = ["lavender", "smoke", "grape", "jet", "duo"] as const;
+
 export async function generateOne(opts: {
   id: string;
   platform: Platform;
   prompt: string;
   adjustment?: string;
   font?: FontKey;
+  /** 0-indexed position of this variant in its channel's group */
+  variantIndex?: number;
+  /** total number of variants requested for this channel */
+  variantTotal?: number;
 }): Promise<Piece> {
-  const { id, platform, prompt, adjustment, font } = opts;
+  const { id, platform, prompt, adjustment, font, variantIndex = 0, variantTotal = 1 } = opts;
   const rules = PLATFORM_RULES[platform];
   const model = modelFor(platform);
+
+  const variantInstruction =
+    variantTotal > 1
+      ? [
+          "",
+          "── VARIANT BRIEF ──",
+          `This is variant ${variantIndex + 1} of ${variantTotal} for ${platform}. Each variant must feel clearly different from the others — different hook, different framing, different visual.`,
+          `Required angle for THIS variant: ${VARIANT_ANGLES[variantIndex % VARIANT_ANGLES.length]}`,
+          `Strongly prefer template "${TEMPLATE_ROTATION[variantIndex % TEMPLATE_ROTATION.length]}" and palette "${PALETTE_ROTATION[variantIndex % PALETTE_ROTATION.length]}" so this variant looks distinct from its siblings (you may override only if there's a clear reason).`,
+          "Do NOT reuse the same metaphor, opener, or visual headline as another variant of this same brief.",
+        ].join("\n")
+      : "";
 
   const userPrompt = [
     `Channel: ${platform.toUpperCase()}.`,
@@ -158,6 +215,7 @@ export async function generateOne(opts: {
     "",
     "── BRIEF ──",
     prompt.trim(),
+    variantInstruction,
     adjustment ? `\n── REVIEWER NOTE (apply this carefully) ──\n${adjustment.trim()}` : "",
     "",
     `Now generate one ${rules.format} for ${platform} AND choose visual design (template, palette, big_text, small_text, kicker). Match the schema exactly.`,
