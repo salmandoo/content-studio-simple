@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { generateOne, FONT_KEYS } from "@/lib/generate";
+import { generateOne } from "@/lib/generate";
 
 export const maxDuration = 120;
 
@@ -9,7 +9,6 @@ const Body = z.object({
   prompt:     z.string().min(4).max(10_000),
   platform:   z.enum(["linkedin", "instagram", "facebook", "blog"]),
   adjustment: z.string().min(1).max(2_000),
-  font:       z.enum(FONT_KEYS).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -28,7 +27,6 @@ export async function POST(req: NextRequest) {
     platform: body.platform,
     prompt: body.prompt,
     adjustment: body.adjustment,
-    font: body.font,
   });
   return NextResponse.json({ piece });
 }

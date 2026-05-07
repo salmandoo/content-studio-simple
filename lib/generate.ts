@@ -2,9 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export type Platform = "linkedin" | "instagram" | "facebook" | "blog";
 
-export const FONT_KEYS = ["inter", "plex"] as const;
-export type FontKey = (typeof FONT_KEYS)[number];
-
 export type DesignSpec = {
   template: "editorial" | "bold" | "stat" | "minimal";
   // Brand palette only — lavender/smoke/grape/jet plus a duo gradient.
@@ -140,7 +137,7 @@ function modelFor(platform: Platform) {
   return platform === "facebook" ? MODEL_FAST : MODEL_LONG;
 }
 
-function imageUrl(platform: Platform, design: DesignSpec, font?: FontKey): string {
+function imageUrl(platform: Platform, design: DesignSpec): string {
   const params = new URLSearchParams({
     p: platform,
     t: design.template,
@@ -149,7 +146,6 @@ function imageUrl(platform: Platform, design: DesignSpec, font?: FontKey): strin
     small: design.small_text,
   });
   if (design.kicker) params.set("k", design.kicker);
-  if (font) params.set("font", font);
   return `/api/og?${params.toString()}`;
 }
 
@@ -184,13 +180,12 @@ export async function generateOne(opts: {
   platform: Platform;
   prompt: string;
   adjustment?: string;
-  font?: FontKey;
   /** 0-indexed position of this variant in its channel's group */
   variantIndex?: number;
   /** total number of variants requested for this channel */
   variantTotal?: number;
 }): Promise<Piece> {
-  const { id, platform, prompt, adjustment, font, variantIndex = 0, variantTotal = 1 } = opts;
+  const { id, platform, prompt, adjustment, variantIndex = 0, variantTotal = 1 } = opts;
   const rules = PLATFORM_RULES[platform];
   const model = modelFor(platform);
 
@@ -257,7 +252,7 @@ export async function generateOne(opts: {
       cta: parsed.cta ?? null,
       slides: parsed.slides ?? null,
       design: parsed.design,
-      image_url: parsed.design ? imageUrl(platform, parsed.design, font) : null,
+      image_url: parsed.design ? imageUrl(platform, parsed.design) : null,
     };
   } catch (e) {
     return {

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { generateOne, FONT_KEYS } from "@/lib/generate";
+import { generateOne } from "@/lib/generate";
 
 export const maxDuration = 300;
 
@@ -16,7 +16,6 @@ const Body = z.object({
       }),
     )
     .min(1),
-  font: z.enum(FONT_KEYS).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,7 +40,6 @@ export async function POST(req: NextRequest) {
           id: `p${pieceIdx++}`,
           platform: c.platform,
           prompt: body.prompt,
-          font: body.font,
           variantIndex: i,
           variantTotal: c.count,
         }),

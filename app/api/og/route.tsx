@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 type Platform = "linkedin" | "instagram" | "facebook" | "blog";
 type Template = "editorial" | "bold" | "stat" | "minimal";
 type PaletteName = "lavender" | "smoke" | "grape" | "jet" | "duo";
-type FontKey = "inter" | "plex";
 
 // ── Brand palette (user-supplied) ───────────────────────────────────
 //   Lavender   #ac73e6  — main accent
@@ -59,19 +58,15 @@ function loadFontFile(filename: string): ArrayBuffer | null {
   }
 }
 
-const FONT_FILES: Record<FontKey, { display: string; regular: string; bold: string }> = {
-  inter: { display: "Inter",         regular: "Inter-Regular.otf",      bold: "Inter-Bold.otf" },
-  plex:  { display: "IBM Plex Sans", regular: "IBMPlexSans-Regular.ttf", bold: "IBMPlexSans-Bold.ttf" },
-};
+const INTER = { display: "Inter", regular: "Inter-Regular.otf", bold: "Inter-Bold.otf" };
 
-function loadFonts(key: FontKey) {
-  const def = FONT_FILES[key] ?? FONT_FILES.inter;
-  const regular = loadFontFile(def.regular);
-  const bold    = loadFontFile(def.bold);
+function loadFonts() {
+  const regular = loadFontFile(INTER.regular);
+  const bold    = loadFontFile(INTER.bold);
   const fonts: { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" }[] = [];
-  if (regular) fonts.push({ name: def.display, data: regular, weight: 400, style: "normal" });
-  if (bold)    fonts.push({ name: def.display, data: bold,    weight: 700, style: "normal" });
-  return { fonts, family: fonts.length > 0 ? def.display : undefined };
+  if (regular) fonts.push({ name: INTER.display, data: regular, weight: 400, style: "normal" });
+  if (bold)    fonts.push({ name: INTER.display, data: bold,    weight: 700, style: "normal" });
+  return { fonts, family: fonts.length > 0 ? INTER.display : undefined };
 }
 
 function getStr(req: NextRequest, key: string, fallback = "") {
@@ -86,11 +81,10 @@ export async function GET(req: NextRequest) {
     const big        = getStr(req, "big",   "Untitled");
     const small      = getStr(req, "small", "");
     const kicker     = getStr(req, "k",     "");
-    const fontKey    = (getStr(req, "font", "inter")    as FontKey);
 
     const dim = DIMENSIONS[platform] ?? DIMENSIONS.instagram;
     const pal = PALETTES[paletteKey] ?? PALETTES.lavender;
-    const { fonts, family } = loadFonts(fontKey);
+    const { fonts, family } = loadFonts();
 
     const isLandscape = dim.w > dim.h;
     const minSide = Math.min(dim.w, dim.h);

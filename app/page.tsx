@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 import {
@@ -15,10 +15,8 @@ import {
   Send,
   Loader2,
   Download,
-  Settings as SettingsIcon,
   Minus,
   Plus,
-  Type,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -49,7 +47,6 @@ type Piece = {
 
 type Verdict = "approved" | "rejected" | "review";
 type Step = "compose" | "generating" | "approve" | "published";
-type FontKey = "inter" | "plex";
 
 const PLATFORMS: {
   key: Platform;
@@ -65,14 +62,6 @@ const PLATFORMS: {
   { key: "blog",      label: "Blog",      format: "Article + hero",     tint: "bg-orange",    mark: "B",  aspect: "16/9"  },
 ];
 
-const FONTS: { key: FontKey; name: string; vibe: string }[] = [
-  { key: "inter", name: "Inter",         vibe: "Clean, modern — the SF stand-in" },
-  { key: "plex",  name: "IBM Plex Sans", vibe: "Technical, precise"              },
-];
-
-type Settings = { font: FontKey };
-const DEFAULT_SETTINGS: Settings = { font: "inter" };
-const SETTINGS_KEY = "content-studio:settings";
 
 // ── Page ───────────────────────────────────────────────────────────────
 export default function Page() {
@@ -91,28 +80,7 @@ export default function Page() {
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Load settings from localStorage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Settings>;
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
-      }
-    } catch {
-      /* noop */
-    }
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    } catch {
-      /* noop */
-    }
-  }, [settings]);
 
   const reset = () => {
     setStep("compose");
@@ -129,7 +97,7 @@ export default function Page() {
       const r = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, channels, font: settings.font }),
+        body: JSON.stringify({ prompt, channels }),
       });
       if (!r.ok) {
         const body = await r.json().catch(() => ({}));
@@ -158,7 +126,6 @@ export default function Page() {
         prompt,
         platform: piece.platform,
         adjustment,
-        font: settings.font,
       }),
     });
     if (!r.ok) {
@@ -175,7 +142,7 @@ export default function Page() {
 
   return (
     <div className="mx-auto max-w-[1080px] px-6 py-8 sm:px-8 sm:py-12">
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
+      <Header />
 
       <StepIndicator step={step} />
 
@@ -221,37 +188,21 @@ export default function Page() {
 
       <Footer />
 
-      {settingsOpen && (
-        <SettingsPanel
-          settings={settings}
-          onChange={setSettings}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
     </div>
   );
 }
 
 // ── Header ─────────────────────────────────────────────────────────────
-function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
+function Header() {
   return (
-    <header className="mb-12 flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-[10px] bg-gradient-to-br from-lavender to-grape text-[16px] font-bold text-white shadow-md">
-          C
-        </span>
-        <div>
-          <p className="text-headline">Content Studio</p>
-          <p className="text-caption-1 text-label-tertiary">Powered by Claude</p>
-        </div>
+    <header className="mb-12 flex items-center gap-2.5">
+      <span className="grid size-9 place-items-center rounded-[10px] bg-gradient-to-br from-lavender to-grape text-[16px] font-bold text-white shadow-md">
+        C
+      </span>
+      <div>
+        <p className="text-headline">Content Studio</p>
+        <p className="text-caption-1 text-label-tertiary">Powered by Claude</p>
       </div>
-      <button
-        onClick={onOpenSettings}
-        className="pressable inline-flex items-center gap-1.5 rounded-[10px] bg-fill px-3 py-2 text-footnote font-medium text-label hover:bg-fill-secondary"
-      >
-        <SettingsIcon className="size-4" strokeWidth={2.2} />
-        Settings
-      </button>
     </header>
   );
 }
@@ -961,101 +912,3 @@ function PublishedStep({ count, onAgain }: { count: number; onAgain: () => void 
   );
 }
 
-// ── Settings panel ─────────────────────────────────────────────────────
-function SettingsPanel({
-  settings, onChange, onClose,
-}: {
-  settings: Settings;
-  onChange: (s: Settings) => void;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-40 flex justify-end bg-label/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="h-full w-full max-w-md overflow-y-auto bg-bg shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-        style={{ animation: "rise 280ms cubic-bezier(0.32, 0.72, 0, 1) both" }}
-      >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-separator bg-bg/85 px-6 py-4 backdrop-blur">
-          <div>
-            <p className="text-headline">Settings</p>
-            <p className="text-footnote text-label-secondary">
-              Choose the design system used in your post images.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="pressable grid size-9 place-items-center rounded-full bg-fill text-label hover:bg-fill-secondary"
-          >
-            <X className="size-4" strokeWidth={2.4} />
-          </button>
-        </div>
-
-        <div className="space-y-8 p-6">
-          {/* Font picker */}
-          <section>
-            <div className="mb-3 flex items-center gap-2">
-              <Type className="size-4 text-lavender" strokeWidth={2.2} />
-              <h3 className="text-callout font-semibold">Display font</h3>
-            </div>
-            <p className="mb-4 text-footnote text-label-secondary">
-              The font baked into every rendered post image. Pick the vibe — it loads at edge time
-              and is cached after the first request.
-            </p>
-            <div className="space-y-2">
-              {FONTS.map((f) => {
-                const active = settings.font === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => onChange({ ...settings, font: f.key })}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-[12px] border bg-card px-4 py-3 text-left transition-colors",
-                      active
-                        ? "border-lavender bg-lavender-soft"
-                        : "border-separator hover:bg-fill",
-                    )}
-                  >
-                    <div>
-                      <p
-                        className={cn(
-                          "text-callout font-semibold",
-                          active ? "text-lavender" : "text-label",
-                        )}
-                      >
-                        {f.name}
-                      </p>
-                      <p className="text-footnote text-label-secondary">{f.vibe}</p>
-                    </div>
-                    {active && <Check className="size-4 text-lavender" strokeWidth={2.6} />}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Custom font upload — soon */}
-          <section>
-            <h3 className="mb-2 text-callout font-semibold">Upload custom font</h3>
-            <div className="rounded-[12px] border border-dashed border-separator bg-fill/40 p-5 text-center">
-              <p className="text-footnote font-medium text-label-secondary">
-                Drop a TTF or OTF file
-              </p>
-              <p className="mt-1 text-caption-1 text-label-tertiary">
-                Coming next — needs a small storage layer to host the file. For now use the curated
-                list.
-              </p>
-            </div>
-          </section>
-
-          <p className="text-caption-1 text-label-tertiary">
-            Settings persist locally in your browser. They never leave this device.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
