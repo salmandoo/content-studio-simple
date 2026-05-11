@@ -2,6 +2,34 @@ import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+// @ts-expect-error — no types shipped with the package
+import ArabicReshaper from "arabic-reshaper";
+// @ts-expect-error — no types shipped with the package
+import bidiFactory from "bidi-js";
+
+type BidiAPI = {
+  getEmbeddingLevels: (text: string, baseDir?: "ltr" | "rtl") => unknown;
+  getReorderedString: (text: string, levels: unknown) => string;
+};
+const bidi = bidiFactory() as BidiAPI;
+
+// Satori's bundled shaper can't handle Arabic GSUB lookups, so we pre-shape
+// Arabic text into Unicode presentation forms (U+FE70–FEFF) and reorder it
+// for visual right-to-left rendering before passing to Satori.
+const ARABIC_RE = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+function shapeIfArabic(input: string): string {
+  if (!input || !ARABIC_RE.test(input)) return input;
+  // 1) Reshape into presentation forms (joined letterforms).
+  const reshaped =
+    (ArabicReshaper as { convertArabic: (s: string) => string }).convertArabic(input);
+  // 2) Apply the bidi algorithm to flip RTL runs into visual order.
+  try {
+    const embeddingLevels = bidi.getEmbeddingLevels(reshaped, "rtl");
+    return bidi.getReorderedString(reshaped, embeddingLevels);
+  } catch {
+    return reshaped;
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,15 +86,38 @@ function loadFontFile(filename: string): ArrayBuffer | null {
   }
 }
 
-const INTER = { display: "Inter", regular: "Inter-Regular.otf", bold: "Inter-Bold.otf" };
+// Inter for Latin English. IBM Plex Sans Arabic for Arabic glyphs.
+// When multiple fonts share a family name, Satori picks the right one
+// per character — so a mixed-language headline just works.
+//
+// Note: Satori chokes on variable fonts (TypeError: Cannot read properties of
+// undefined (reading '256')), so we load the static Inter OTFs here. The UI
+// can still use the variable font via @font-face — it's only the server-side
+// renderer that needs static files.
+const FONT_FAMILY = "Brand";
 
-function loadFonts() {
-  const regular = loadFontFile(INTER.regular);
-  const bold    = loadFontFile(INTER.bold);
-  const fonts: { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" }[] = [];
-  if (regular) fonts.push({ name: INTER.display, data: regular, weight: 400, style: "normal" });
-  if (bold)    fonts.push({ name: INTER.display, data: bold,    weight: 700, style: "normal" });
-  return { fonts, family: fonts.length > 0 ? INTER.display : undefined };
+type SatoriFont = { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" };
+
+function loadFonts(): { fonts: SatoriFont[]; family: string | undefined } {
+  const fonts: SatoriFont[] = [];
+
+  const interRegular = loadFontFile("Inter-Regular.otf");
+  const interBold    = loadFontFile("Inter-Bold.otf");
+  if (interRegular) fonts.push({ name: FONT_FAMILY, data: interRegular, weight: 400, style: "normal" });
+  if (interBold)    fonts.push({ name: FONT_FAMILY, data: interBold,    weight: 700, style: "normal" });
+
+  // Cairo (Google Fonts) for Arabic glyphs in rendered images. Modern,
+  // geometric, visually close to IBM Plex Sans Arabic. IBM Plex Sans Arabic
+  // itself uses an OpenType GSUB lookup format (5/3) that Satori's bundled
+  // shaper (opentype.js) doesn't implement — Cairo uses simpler substitutions
+  // that shape correctly.
+  // (The UI keeps IBM Plex Sans Arabic via @font-face — browsers handle it.)
+  const arabicRegular = loadFontFile("Cairo-Regular.ttf");
+  const arabicBold    = loadFontFile("Cairo-Bold.ttf");
+  if (arabicRegular) fonts.push({ name: FONT_FAMILY, data: arabicRegular, weight: 400, style: "normal" });
+  if (arabicBold)    fonts.push({ name: FONT_FAMILY, data: arabicBold,    weight: 700, style: "normal" });
+
+  return { fonts, family: fonts.length > 0 ? FONT_FAMILY : undefined };
 }
 
 function getStr(req: NextRequest, key: string, fallback = "") {
@@ -78,9 +129,9 @@ export async function GET(req: NextRequest) {
     const platform   = (getStr(req, "p",   "instagram") as Platform);
     const template   = (getStr(req, "t",   "editorial") as Template);
     const paletteKey = (getStr(req, "pal", "lavender")  as PaletteName);
-    const big        = getStr(req, "big",   "Untitled");
-    const small      = getStr(req, "small", "");
-    const kicker     = getStr(req, "k",     "");
+    const big        = shapeIfArabic(getStr(req, "big",   "Untitled"));
+    const small      = shapeIfArabic(getStr(req, "small", ""));
+    const kicker     = shapeIfArabic(getStr(req, "k",     ""));
 
     const dim = DIMENSIONS[platform] ?? DIMENSIONS.instagram;
     const pal = PALETTES[paletteKey] ?? PALETTES.lavender;

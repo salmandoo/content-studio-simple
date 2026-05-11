@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* ───────────── Brand fonts ─────────────
+   Inter (variable) for Latin, IBM Plex Sans Arabic for Arabic.
+   Both registered under one family — the browser picks per glyph.
+   ────────────────────────────────────── */
+@font-face {
+  font-family: "Brand";
+  src: url("/Inter-Variable.ttf") format("truetype-variations"),
+       url("/Inter-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-007F, U+0080-024F, U+0300-036F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+@font-face {
+  font-family: "Brand";
+  src: url("/IBMPlexSansArabic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "Brand";
+  src: url("/IBMPlexSansArabic-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
 /* ───────────── Brand palette ─────────────
    Lavender   #ac73e6  — main accent (logo, primary actions)
    Smoke      #f5f5f5  — main background
@@ -34,7 +64,7 @@
   --color-red:              #ff3b30;
   --color-red-soft:         rgba(255, 59, 48, 0.12);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+  --font-sans: "Brand", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
                "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
 
